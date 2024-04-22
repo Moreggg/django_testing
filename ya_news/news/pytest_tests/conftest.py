@@ -1,7 +1,8 @@
-import pytest
-
 from datetime import timedelta
+
+import pytest
 from django.conf import settings
+from django.urls import reverse
 from django.utils import timezone
 from django.test.client import Client
 
@@ -67,23 +68,10 @@ def comment(news, author):
 
 @pytest.fixture
 def all_comments(news, author):
-    now = timezone.now()
     for index in range(10):
-        comment = Comment.objects.create(
+        Comment.objects.create(
             news=news, author=author, text=f'Tекст {index}',
         )
-        comment.created = now + timedelta(days=index)
-        comment.save()
-
-
-@pytest.fixture
-def id_news_for_args(news):
-    return (news.id,)
-
-
-@pytest.fixture
-def id_comment_for_args(comment):
-    return (comment.id,)
 
 
 @pytest.fixture
@@ -91,3 +79,38 @@ def form_data():
     return {
         'text': 'Новый текст',
     }
+
+
+@pytest.fixture
+def home_url():
+    return reverse('news:home')
+
+
+@pytest.fixture
+def detail_url(news):
+    return reverse('news:detail', args=(news.id,))
+
+
+@pytest.fixture
+def delete_comment_url(comment):
+    return reverse('news:delete', args=(comment.id,))
+
+
+@pytest.fixture
+def edit_comment_url(comment):
+    return reverse('news:edit', args=(comment.id,))
+
+
+@pytest.fixture
+def login_url():
+    return reverse('users:login')
+
+
+@pytest.fixture
+def logout_url():
+    return reverse('users:logout')
+
+
+@pytest.fixture
+def sign_up_url():
+    return reverse('users:signup')

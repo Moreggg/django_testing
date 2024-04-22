@@ -1,44 +1,70 @@
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
+
 
 from notes.models import Note
 from notes.forms import NoteForm
 
 User = get_user_model()
 
+SLUG = 'slug'
+
+NOTES_LIST_URL = reverse('notes:list')
+NOTES_ADD_URL = reverse('notes:add')
+NOTES_EDIT_URL = reverse('notes:edit', args=(SLUG,))
+
 
 class TestNotesPages(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.author = User.objects.create(username='Автор')
+        cls.client_author = Client()
+        cls.client_author.force_login(cls.author)
         cls.another_author = User.objects.create(username='Другой автор')
+        cls.client_another_author = Client()
+        cls.client_another_author.force_login(cls.another_author)
         cls.note = Note.objects.create(
             title='Заголовок',
             text='Текст',
+            slug=SLUG,
             author=cls.author
         )
 
     def test_notes_list_for_author_user(self):
-        url = reverse('notes:list')
-        self.client.force_login(self.author)
-        response = self.client.get(url)
+        """Отдельная заметка передаётся на страницу."""
+        response = self.client_author.get(NOTES_LIST_URL)
         object_list = response.context['object_list']
-        self.assertIn(self.note, object_list)
+        self.assertEqual(len(object_list), 1)
+        note = Note.objects.get()
+        self.assertEqual(note.title, self.note.title)
+        self.assertEqual(note.text, self.note.text)
+        self.assertEqual(note.slug, self.note.slug)
+        self.assertEqual(note.author, self.note.author)
 
     def test_notes_list_for_non_author_user(self):
-        url = reverse('notes:list')
-        self.client.force_login(self.another_author)
-        response = self.client.get(url)
+        """В список заметок одного пользователя не
+        попадают заметки другого пользователя.
+        """
+        response = self.client_another_author.get(NOTES_LIST_URL)
         object_list = response.context['object_list']
-        self.assertNotIn(self.note, object_list)
+        self.assertEqual(len(object_list), 0)
 
     def test_anonymous_client_has_no_form(self):
-        response = self.client.get(reverse('notes:add'))
-        self.assertIsNone(response.context)
+        """На страницы создания и редактирования заметки
+        для анонимного пользователя не передаются формы.
+        """
+        for name in (NOTES_ADD_URL, NOTES_EDIT_URL):
+            with self.subTest(name=name):
+                response = self.client.get(name)
+                self.assertIsNone(response.context)
 
     def test_authorized_client_has_form(self):
-        self.client.force_login(self.author)
-        response = self.client.get(reverse('notes:add'))
-        self.assertIn('form', response.context)
-        self.assertIsInstance(response.context['form'], NoteForm)
+        """На страницы создания и редактирования заметки
+        для авторизованного пользователя передаются формы.
+        """
+        for name in (NOTES_ADD_URL, NOTES_EDIT_URL):
+            with self.subTest(name=name):
+                response = self.client_author.get(name)
+                self.assertIn('form', response.context)
+                self.assertIsInstance(response.context['form'], NoteForm)

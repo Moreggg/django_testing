@@ -1,75 +1,92 @@
 from http import HTTPStatus
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.urls import reverse
 
 from notes.models import Note
 
 User = get_user_model()
 
+SLUG = 'slug'
+
+HOME_URL = reverse('notes:home')
+LOGIN_URL = reverse('users:login')
+LOGOUT_URL = reverse('users:logout')
+SIGNUP_URL = reverse('users:signup')
+NOTES_LIST_URL = reverse('notes:list')
+ADD_NOTE_URL = reverse('notes:add')
+SUCCESS_URL = reverse('notes:success')
+DETAIL_NOTE_URL = reverse('notes:detail', args=(SLUG,))
+EDIT_NOTE_URL = reverse('notes:edit', args=(SLUG,))
+DELETE_NOTE_URL = reverse('notes:delete', args=(SLUG,))
+
 
 class TestRoutes(TestCase):
-
     @classmethod
     def setUpTestData(cls):
         cls.author = User.objects.create(username='Автор')
+        cls.client_author = Client()
+        cls.client_author.force_login(cls.author)
         cls.reader = User.objects.create(username='Неавтор')
+        cls.client_reader = Client()
+        cls.client_reader.force_login(cls.reader)
         cls.note = Note.objects.create(
             title='Заголовок',
             text='Текст',
+            slug=SLUG,
             author=cls.author,
         )
-
-    def test_pages_availability(self):
-        urls = (
-            ('notes:home', None),
-            ('users:login', None),
-            ('users:logout', None),
-            ('users:signup', None),
+        cls.urls = (
+            HOME_URL,
+            LOGIN_URL,
+            SIGNUP_URL,
+            NOTES_LIST_URL,
+            ADD_NOTE_URL,
+            SUCCESS_URL,
+            DETAIL_NOTE_URL,
+            EDIT_NOTE_URL,
+            DELETE_NOTE_URL,
+            LOGOUT_URL,
         )
-        for name, args in urls:
+
+    def test_author_access_pages(self):
+        """Автор заметки имеет доступ ко всем страницам."""
+        for name in self.urls:
             with self.subTest(name=name):
-                url = reverse(name, args=args)
-                response = self.client.get(url)
+                response = self.client_author.get(name)
                 self.assertEqual(response.status_code, HTTPStatus.OK)
 
-    def test_availability_for_note_edit_delete_detail(self):
-        users_statutes = (
-            (self.author, HTTPStatus.OK),
-            (self.reader, HTTPStatus.NOT_FOUND),
-        )
-        for user, status in users_statutes:
-            self.client.force_login(user)
-            for name in ('notes:edit', 'notes:delete', 'notes:detail'):
-                with self.subTest(user=user, name=name):
-                    url = reverse(name, args=(self.note.slug,))
-                    response = self.client.get(url)
-                    self.assertEqual(response.status_code, status)
-
-    def test_availability_for_notes_list_success_add(self):
-        users_statutes = (
-            (self.author, HTTPStatus.OK),
-        )
-        for user, status in users_statutes:
-            self.client.force_login(user)
-            for name in ('notes:list', 'notes:success', 'notes:add'):
-                with self.subTest(user=user, name=name):
-                    url = reverse(name,)
-                    response = self.client.get(url)
-                    self.assertEqual(response.status_code, status)
-
-    def test_redirect_for_anonymous_client(self):
-        login_url = reverse('users:login')
-        for name in ('notes:edit', 'notes:delete', 'notes:detail'):
+    def test_non_author_access_pages(self):
+        """Не автор не имеет доступа к редактирванию, удалению и просмотру
+        чужих заметок.
+        """
+        for name in self.urls:
             with self.subTest(name=name):
-                url = reverse(name, args=(self.note.slug,))
-                redirect_url = f'{login_url}?next={url}'
-                response = self.client.get(url)
-                self.assertRedirects(response, redirect_url)
-        for name in ('notes:list', 'notes:success', 'notes:add'):
+                response = self.client_reader.get(name)
+                if name in (EDIT_NOTE_URL, DELETE_NOTE_URL, DETAIL_NOTE_URL):
+                    self.assertEqual(response.status_code,
+                                     HTTPStatus.NOT_FOUND)
+                else:
+                    self.assertEqual(response.status_code,
+                                     HTTPStatus.OK)
+
+    def test_anonymous_access_pages(self):
+        """Анонимному пользователю доступны только страницы
+        логина, регистрации, выхода и домашняя страница.
+        """
+        for name in self.urls:
             with self.subTest(name=name):
-                url = reverse(name)
-                redirect_url = f'{login_url}?next={url}'
-                response = self.client.get(url)
-                self.assertRedirects(response, redirect_url)
+                response = self.client.get(name)
+                if name in (
+                    NOTES_LIST_URL,
+                    ADD_NOTE_URL,
+                    SUCCESS_URL,
+                    DETAIL_NOTE_URL,
+                    EDIT_NOTE_URL,
+                    DELETE_NOTE_URL,
+                ):
+                    redirect_url = f'{LOGIN_URL}?next={name}'
+                    self.assertRedirects(response, redirect_url)
+                else:
+                    self.assertEqual(response.status_code, HTTPStatus.OK)
