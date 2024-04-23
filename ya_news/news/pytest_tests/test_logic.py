@@ -6,6 +6,8 @@ from pytest_django.asserts import assertRedirects, assertFormError
 from news.forms import BAD_WORDS, WARNING
 from news.models import Comment
 
+pytestmark = pytest.mark.django_db
+
 
 def test_user_can_create_comment(
         author_client, author, form_data, news, detail_url
@@ -22,7 +24,6 @@ def test_user_can_create_comment(
     assert comment.author == author
 
 
-@pytest.mark.django_db
 def test_anonymous_user_cant_create_comment(
     client, form_data, detail_url, login_url
 ):

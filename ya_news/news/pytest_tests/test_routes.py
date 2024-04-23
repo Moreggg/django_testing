@@ -16,56 +16,21 @@ ANONYMOUS_CLINET = Client()
 AUTHOR_CLIENT = pytest.lazy_fixture('author_client')
 NOT_AUTHOR_CLIENT = pytest.lazy_fixture('not_author_client')
 
+pytestmark = pytest.mark.django_db
 
-@pytest.mark.django_db
+
 @pytest.mark.parametrize(
     'url, parametrized_client, expected_status',
     (
-        (
-            HOME_URL,
-            ANONYMOUS_CLINET,
-            HTTPStatus.OK
-        ),
-        (
-            DETAIL_URL,
-            ANONYMOUS_CLINET,
-            HTTPStatus.OK
-        ),
-        (
-            LOGIN_URL,
-            ANONYMOUS_CLINET,
-            HTTPStatus.OK
-        ),
-        (
-            LOGOUT_URL,
-            ANONYMOUS_CLINET,
-            HTTPStatus.OK
-        ),
-        (
-            SIGN_UP_URL,
-            ANONYMOUS_CLINET,
-            HTTPStatus.OK
-        ),
-        (
-            EDIT_COMMENT_URL,
-            NOT_AUTHOR_CLIENT,
-            HTTPStatus.NOT_FOUND
-        ),
-        (
-            DELETE_COMMENT_URL,
-            NOT_AUTHOR_CLIENT,
-            HTTPStatus.NOT_FOUND
-        ),
-        (
-            EDIT_COMMENT_URL,
-            AUTHOR_CLIENT,
-            HTTPStatus.OK
-        ),
-        (
-            DELETE_COMMENT_URL,
-            AUTHOR_CLIENT,
-            HTTPStatus.OK
-        )
+        (HOME_URL, ANONYMOUS_CLINET, HTTPStatus.OK),
+        (DETAIL_URL, ANONYMOUS_CLINET, HTTPStatus.OK),
+        (LOGIN_URL, ANONYMOUS_CLINET, HTTPStatus.OK),
+        (LOGOUT_URL, ANONYMOUS_CLINET, HTTPStatus.OK),
+        (SIGN_UP_URL, ANONYMOUS_CLINET, HTTPStatus.OK),
+        (EDIT_COMMENT_URL, NOT_AUTHOR_CLIENT, HTTPStatus.NOT_FOUND),
+        (DELETE_COMMENT_URL, NOT_AUTHOR_CLIENT, HTTPStatus.NOT_FOUND),
+        (EDIT_COMMENT_URL, AUTHOR_CLIENT, HTTPStatus.OK),
+        (DELETE_COMMENT_URL, AUTHOR_CLIENT, HTTPStatus.OK)
     )
 )
 def test_pages_availability(url, parametrized_client, expected_status):
@@ -81,7 +46,6 @@ def test_pages_availability(url, parametrized_client, expected_status):
     assert response.status_code == expected_status
 
 
-@pytest.mark.django_db
 @pytest.mark.parametrize(
     'url',
     (EDIT_COMMENT_URL, DELETE_COMMENT_URL)

@@ -61,10 +61,11 @@ class TestRoutes(TestCase):
         """Не автор не имеет доступа к редактирванию, удалению и просмотру
         чужих заметок.
         """
+        author_urls = (EDIT_NOTE_URL, DELETE_NOTE_URL, DETAIL_NOTE_URL)
         for name in self.urls:
             with self.subTest(name=name):
                 response = self.client_reader.get(name)
-                if name in (EDIT_NOTE_URL, DELETE_NOTE_URL, DETAIL_NOTE_URL):
+                if name in author_urls:
                     self.assertEqual(response.status_code,
                                      HTTPStatus.NOT_FOUND)
                 else:
@@ -75,18 +76,12 @@ class TestRoutes(TestCase):
         """Анонимному пользователю доступны только страницы
         логина, регистрации, выхода и домашняя страница.
         """
+        anonymous_urls = (LOGIN_URL, SIGNUP_URL, HOME_URL, LOGOUT_URL)
         for name in self.urls:
             with self.subTest(name=name):
                 response = self.client.get(name)
-                if name in (
-                    NOTES_LIST_URL,
-                    ADD_NOTE_URL,
-                    SUCCESS_URL,
-                    DETAIL_NOTE_URL,
-                    EDIT_NOTE_URL,
-                    DELETE_NOTE_URL,
-                ):
+                if name in anonymous_urls:
+                    self.assertEqual(response.status_code, HTTPStatus.OK)
+                else:
                     redirect_url = f'{LOGIN_URL}?next={name}'
                     self.assertRedirects(response, redirect_url)
-                else:
-                    self.assertEqual(response.status_code, HTTPStatus.OK)

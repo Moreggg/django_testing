@@ -131,21 +131,23 @@ class TestCommentEditDelete(TestCase):
 
     def test_author_can_edit_note(self):
         """Пользователь может редактировать свою заметку."""
-        notes_count = Note.objects.count()
-        self.assertEqual(notes_count, 1)
+        notes_count_before = Note.objects.count()
         response = self.author_client.post(EDIT_NOTE_URL, data=self.form_data)
+        notes_count_after = Note.objects.count()
+        self.assertEqual(notes_count_after, notes_count_before)
         self.assertRedirects(response, SUCCESS_URL)
         note = Note.objects.get()
         self.assertEqual(note.title, self.form_data['title'])
         self.assertEqual(note.text, self.form_data['text'])
         self.assertEqual(note.slug, self.form_data['slug'])
-        self.assertEqual(note.author, self.author)
+        self.assertEqual(note.author, self.note.author)
 
     def test_user_cant_edit_note_of_another_user(self):
         """Пользователь не может редактировать чужую заметку."""
-        notes_count = Note.objects.count()
-        self.assertEqual(notes_count, 1)
+        notes_count_before = Note.objects.count()
         response = self.reader_client.post(EDIT_NOTE_URL, data=self.form_data)
+        notes_count_after = Note.objects.count()
+        self.assertEqual(notes_count_after, notes_count_before)
         self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
         note = Note.objects.get()
         self.assertEqual(note.title, self.note.title)
